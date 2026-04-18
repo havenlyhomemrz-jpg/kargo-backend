@@ -1,53 +1,55 @@
 const path = require('path');
-const sqlite3 = require('sqlite3').verbose();
+const Database = require('better-sqlite3');
 const bcrypt = require('bcryptjs');
 
 const databasePath = path.resolve(__dirname, '..', 'database.sqlite');
-const db = new sqlite3.Database(databasePath);
+const db = new Database(databasePath);
 const ADMIN_USERNAME = 'rskuryer';
 const ADMIN_PASSWORD = 'uncharted0833';
 const ADMIN_ROLE = 'admin';
 const BCRYPT_SALT_ROUNDS = 10;
 
-function run(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.run(sql, params, function onRun(error) {
-      if (error) {
-        reject(error);
-        return;
-      }
+function execute(statement, method, params = []) {
+  if (Array.isArray(params)) {
+    return statement[method](...params);
+  }
 
-      resolve({
-        lastID: this.lastID,
-        changes: this.changes,
-      });
-    });
+  if (params && typeof params === 'object') {
+    return statement[method](params);
+  }
+
+  if (params === undefined || params === null) {
+    return statement[method]();
+  }
+
+  return statement[method](params);
+}
+
+function run(sql, params = []) {
+  return Promise.resolve().then(() => {
+    const statement = db.prepare(sql);
+    const result = execute(statement, 'run', params);
+
+    return {
+      lastID: Number(result.lastInsertRowid),
+      changes: result.changes,
+    };
   });
 }
 
 function get(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.get(sql, params, (error, row) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-
-      resolve(row || null);
-    });
+  return Promise.resolve().then(() => {
+    const statement = db.prepare(sql);
+    const row = execute(statement, 'get', params);
+    return row || null;
   });
 }
 
 function all(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.all(sql, params, (error, rows) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-
-      resolve(rows || []);
-    });
+  return Promise.resolve().then(() => {
+    const statement = db.prepare(sql);
+    const rows = execute(statement, 'all', params);
+    return rows || [];
   });
 }
 
