@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
 import LoginPage from './pages/LoginPage';
 import AdminDashboard from './pages/AdminDashboard';
@@ -26,28 +28,31 @@ function App() {
 
   return (
     <Router>
-      <Routes>
-        <Route 
-          path="/login" 
-          element={user ? <Navigate to={`/${user.role}`} /> : <LoginPage onLoginSuccess={handleLoginSuccess} />}
-        />
-        <Route 
-          path="/admin" 
-          element={user && user.role === 'admin' ? <AdminDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />}
-        />
-        <Route 
-          path="/store" 
-          element={user && user.role === 'store' ? <StoreDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />}
-        />
-        <Route 
-          path="/courier" 
-          element={user && user.role === 'courier' ? <CourierDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />}
-        />
-        <Route 
-          path="/" 
-          element={user ? <Navigate to={`/${user.role}`} /> : <Navigate to="/login" />}
-        />
-      </Routes>
+      <>
+        <Routes>
+          <Route 
+            path="/login" 
+            element={user ? <Navigate to={`/${user.role}`} /> : <LoginPage onLoginSuccess={handleLoginSuccess} />}
+          />
+          <Route 
+            path="/admin" 
+            element={user && user.role === 'admin' ? <AdminDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />}
+          />
+          <Route 
+            path="/store" 
+            element={user && user.role === 'store' ? <StoreDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />}
+          />
+          <Route 
+            path="/courier" 
+            element={user && user.role === 'courier' ? <CourierDashboard user={user} onLogout={handleLogout} /> : <Navigate to="/login" />}
+          />
+          <Route 
+            path="/" 
+            element={user ? <Navigate to={`/${user.role}`} /> : <Navigate to="/login" />}
+          />
+        </Routes>
+        <ToastContainer position="top-right" autoClose={3000} hideProgressBar newestOnTop closeOnClick pauseOnFocusLoss pauseOnHover theme="colored" />
+      </>
     </Router>
   );
 }

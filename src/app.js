@@ -17,7 +17,7 @@ const storeRoutes = require('./routes/storeRoutes');
 const courierRoutes = require('./routes/courierRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
-const { initDatabase, databasePath } = require('./db');
+const { initDatabase } = require('./db');
 const { authenticateToken, authorizeRoles } = require('./middlewares/authMiddleware');
 const { getAllCouriersController, deleteCourierController, deleteStoreController } = require('./controllers/adminController');
 
@@ -52,7 +52,7 @@ async function startServer() {
   try {
     await initDatabase();
 
-    console.log(`SQLite database ready at ${databasePath}`);
+    console.log('PostgreSQL database connection initialized');
 
     app.listen(port, () => {
       console.log(`Server listening on http://localhost:${port}`);

@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { toast } from 'react-toastify';
 import './Dashboard.css';
+import { API_BASE_URL } from '../apiBase';
 
 function StoreDashboard({ user, onLogout }) {
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
-  const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:4000';
   const themeStorageKey = 'app-theme';
 
   const statusLabels = {
@@ -319,10 +320,11 @@ function StoreDashboard({ user, onLogout }) {
     setLoading(true);
 
     try {
-      const response = await axios.post(`${API_BASE}/api/orders`, orderForm, {
+      const response = await axios.post(`/api/orders`, orderForm, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSuccess('Sifariş uğurla göndərildi');
+      toast.success('Yeni sifariş yaradıldı');
       const createdOrder = response.data?.order;
       if (createdOrder) {
         setOrders((prev) => [createdOrder, ...prev]);
@@ -366,7 +368,7 @@ function StoreDashboard({ user, onLogout }) {
       return rawUrl;
     }
 
-    return `${API_BASE}/uploads/${rawUrl}`;
+    return `${API_BASE_URL}/uploads/${rawUrl}`;
   };
 
   const getPaymentReceiptKey = (payment) => String(payment?.id || payment?.createdAt || 'unknown');
@@ -487,7 +489,7 @@ function StoreDashboard({ user, onLogout }) {
         };
       }
 
-      await axios.post(`${API_BASE}/api/payments`, payload, {
+      await axios.post(`/api/payments`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

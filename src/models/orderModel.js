@@ -107,7 +107,7 @@ async function getCourierPanelOrders(courierId) {
   const rows = await all(
     `SELECT * FROM orders
      WHERE status = ? OR courierId = ?
-     ORDER BY datetime(updatedAt) DESC, datetime(createdAt) DESC, id DESC`,
+     ORDER BY updatedAt DESC, createdAt DESC, id DESC`,
     ['pending', courierId]
   );
 

@@ -96,7 +96,7 @@ function CourierDashboard({ user, onLogout }) {
   const getStatusActions = (status) => {
     // Returns array of { label, newStatus } for current status
     if (status === 'pending' || status === 'created' || status === 'teyin_edildi' || status === 'assigned') {
-      return [{ label: 'Götürdüm', newStatus: 'kuryerde' }];
+      return [{ label: 'Götürdüm', newStatus: 'picked' }];
     }
     if (status === 'approved' || status === 'picked' || status === 'picked_up' || status === 'kuryerde' || status === 'onTheWay' || status === 'goturuldu' || status === 'yoldadir') {
       return [
@@ -112,11 +112,29 @@ function CourierDashboard({ user, onLogout }) {
     setError('');
 
     try {
-      await axios.put(
+      const response = await axios.put(
         `/api/courier/orders/${orderId}/status`,
         { status: newStatus, cancelReason },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
+      const updatedOrder = response.data?.order;
+      if (updatedOrder) {
+        setOrders((currentOrders) => {
+          const hasOrder = currentOrders.some(
+            (currentOrder) => String(getOrderIdValue(currentOrder)) === String(orderId)
+          );
+
+          const nextOrders = currentOrders.map((currentOrder) => (
+            String(getOrderIdValue(currentOrder)) === String(orderId)
+              ? { ...currentOrder, ...updatedOrder }
+              : currentOrder
+          ));
+
+          return hasOrder ? nextOrders : [updatedOrder, ...nextOrders];
+        });
+      }
+
       await loadOrders(false);
     } catch (err) {
       setError(err.response?.data?.error || 'Status yenilənərkən xəta baş verdi');
@@ -351,7 +369,7 @@ function CourierDashboard({ user, onLogout }) {
                           }}
                           disabled={updatingOrderId === order.id}
                         >
-                          {action.newStatus === 'kuryerde' ? 'Götürdüm' : action.label}
+                          {action.newStatus === 'picked' ? 'Götürdüm' : action.label}
                         </button>
                       ))
                     ) : (

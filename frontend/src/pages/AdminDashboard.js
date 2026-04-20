@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { toast } from 'react-toastify';
 import './Dashboard.css';
 import './AdminPanel.css';
+import { API_BASE_URL } from '../apiBase';
 
 function AdminDashboard({ user, onLogout }) {
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
-  const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:4000';
   const themeStorageKey = 'app-theme';
 
   const statusLabels = {
@@ -373,7 +374,7 @@ function AdminDashboard({ user, onLogout }) {
     }));
 
     try {
-      const response = await axios.post(`${API_BASE}/api/admin/verify-code`, {
+      const response = await axios.post(`/api/admin/verify-code`, {
         code: destructiveAction.adminCode.trim()
       }, {
         headers: { Authorization: `Bearer ${token}` }
@@ -434,14 +435,14 @@ function AdminDashboard({ user, onLogout }) {
 
     try {
       if (destructiveAction.actionType === 'delete-courier') {
-        await axios.delete(`${API_BASE}/api/couriers/${destructiveAction.targetId}`, {
+        await axios.delete(`/api/couriers/${destructiveAction.targetId}`, {
           headers: { Authorization: `Bearer ${token}` },
           data: { adminCode }
         });
         setCouriers((prev) => prev.filter((courier) => String(courier.id) !== String(destructiveAction.targetId)));
         await fetchCouriers();
       } else if (destructiveAction.actionType === 'delete-store') {
-        await axios.delete(`${API_BASE}/api/stores/${destructiveAction.targetId}`, {
+        await axios.delete(`/api/stores/${destructiveAction.targetId}`, {
           headers: { Authorization: `Bearer ${token}` },
           data: { adminCode }
         });
@@ -450,14 +451,14 @@ function AdminDashboard({ user, onLogout }) {
       } else if (destructiveAction.actionType === 'delete-expense') {
         setExpenses((prev) => prev.filter((item) => String(item.id) !== String(destructiveAction.targetId)));
       } else if (destructiveAction.actionType === 'cancel-payment') {
-        await axios.post(`${API_BASE}/api/admin/payments/${destructiveAction.targetId}/cancel`, {
+        await axios.post(`/api/admin/payments/${destructiveAction.targetId}/cancel`, {
           adminCode
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
         await Promise.all([fetchPayments(), fetchAllOrders(false)]);
       } else if (destructiveAction.actionType === 'cancel-order') {
-        await axios.post(`${API_BASE}/api/admin/orders/${destructiveAction.targetId}/cancel`, {
+        await axios.post(`/api/admin/orders/${destructiveAction.targetId}/cancel`, {
           adminCode,
           cancelReason: reason
         }, {
@@ -505,7 +506,7 @@ function AdminDashboard({ user, onLogout }) {
     setPendingLoading(true);
 
     try {
-      const response = await axios.get(`${API_BASE}/api/orders`, {
+      const response = await axios.get(`/api/orders`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setPendingOrders(response.data.orders || []);
@@ -520,7 +521,7 @@ function AdminDashboard({ user, onLogout }) {
   const fetchCouriers = async () => {
     setCouriersLoading(true);
     try {
-      const response = await axios.get(`${API_BASE}/api/couriers`, {
+      const response = await axios.get(`/api/couriers`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setCouriers(response.data.couriers || []);
@@ -536,7 +537,7 @@ function AdminDashboard({ user, onLogout }) {
     setAllOrdersError('');
     if (showLoading) setAllOrdersLoading(true);
     try {
-      const response = await axios.get(`${API_BASE}/api/admin/orders`, {
+      const response = await axios.get(`/api/admin/orders`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setAllOrders(response.data.orders || []);
@@ -551,7 +552,7 @@ function AdminDashboard({ user, onLogout }) {
   const fetchStores = async () => {
     setStoresLoading(true);
     try {
-      const response = await axios.get(`${API_BASE}/api/admin/stores`, {
+      const response = await axios.get(`/api/admin/stores`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       console.log('Admin stores response:', response.data?.stores || []);
@@ -567,7 +568,7 @@ function AdminDashboard({ user, onLogout }) {
     setPaymentsError('');
     setPaymentsLoading(true);
     try {
-      const response = await axios.get(`${API_BASE}/api/payments`, {
+      const response = await axios.get(`/api/payments`, {
         params: storeId ? { storeId } : undefined,
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -1373,7 +1374,7 @@ function AdminDashboard({ user, onLogout }) {
       return rawUrl;
     }
 
-    return `${API_BASE}/uploads/${rawUrl}`;
+    return `${API_BASE_URL}/uploads/${rawUrl}`;
   };
 
   const getPaymentReceiptKey = (payment) => String(payment?.id || payment?.createdAt || 'unknown');
@@ -1982,7 +1983,7 @@ function AdminDashboard({ user, onLogout }) {
     }
 
     try {
-      await axios.post(`${API_BASE}/api/admin/orders/${orderId}/assign`, { courierId }, {
+      await axios.post(`/api/admin/orders/${orderId}/assign`, { courierId }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       showSuccess('Kuryer təyin edildi');
@@ -2008,7 +2009,7 @@ function AdminDashboard({ user, onLogout }) {
     }
 
     try {
-      await axios.post(`${API_BASE}/api/admin/orders/${orderId}/reassign`, { courierId }, {
+      await axios.post(`/api/admin/orders/${orderId}/reassign`, { courierId }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       showSuccess('Sifariş başqa kuryerə təyin edildi');
@@ -2032,7 +2033,7 @@ function AdminDashboard({ user, onLogout }) {
     }
 
     try {
-      await axios.post(`${API_BASE}/api/admin/orders/${orderId}/reassign`, { courierId }, {
+      await axios.post(`/api/admin/orders/${orderId}/reassign`, { courierId }, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -2051,11 +2052,12 @@ function AdminDashboard({ user, onLogout }) {
     }
 
     try {
-      await axios.put(`${API_BASE}/api/payments/${paymentId}/approve`, null, {
+      await axios.put(`/api/payments/${paymentId}/approve`, null, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       showSuccess('Ödəniş təsdiqləndi');
+      toast.success('Ödəniş uğurla tamamlandı');
       fetchPayments();
       fetchAllOrders();
     } catch (err) {
@@ -2087,7 +2089,7 @@ function AdminDashboard({ user, onLogout }) {
     setStoreLoading(true);
 
     try {
-      await axios.post(`${API_BASE}/api/admin/store/create`, storeForm, {
+      await axios.post(`/api/admin/store/create`, storeForm, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -2122,7 +2124,7 @@ function AdminDashboard({ user, onLogout }) {
     setCourierLoading(true);
 
     try {
-      await axios.post(`${API_BASE}/api/admin/courier/create`, courierForm, {
+      await axios.post(`/api/admin/courier/create`, courierForm, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -2553,17 +2555,11 @@ function AdminDashboard({ user, onLogout }) {
                 <div className="order-status">Heç bir mağaza tapılmadı.</div>
               ) : (
                 <div className="payment-summary-table">
-                  <div className="table-row table-header">
-                    <span>Mağaza</span>
-                    <span>Ümumi sifariş məbləği</span>
-                    <span>Ödənilib (₼)</span>
-                    <span>Qalan borc (₼)</span>
-                  </div>
                   {searchedStorePaymentSummary.map((store) => (
                     <button
                       key={store.id}
                       type="button"
-                      className={`table-row table-row-button ${selectedPaymentStoreId === String(store.id) ? 'active-row' : ''}`}
+                      className={`payment-summary-card ${selectedPaymentStoreId === String(store.id) ? 'is-selected' : ''}`}
                       onClick={() => {
                         if (!store?.id) {
                           return;
@@ -2574,10 +2570,18 @@ function AdminDashboard({ user, onLogout }) {
                         setReceiptPayment(null);
                       }}
                     >
-                      <span>{store?.name || 'N/A'}</span>
-                      <span>₼ {(store?.totalOrders || 0).toFixed(2)}</span>
-                      <span>₼ {(store?.totalPaid || 0).toFixed(2)}</span>
-                      <span>₼ {(store?.remaining || 0).toFixed(2)}</span>
+                      <div className="payment-summary-card-header">
+                        <span className="payment-summary-card-label">Mağaza</span>
+                        <strong className="payment-summary-card-name">{store?.name || 'N/A'}</strong>
+                      </div>
+                      <div className="payment-summary-card-main">
+                        <span className="payment-summary-card-label">Ödənilib</span>
+                        <strong className="payment-summary-card-amount">₼ {(store?.totalPaid || 0).toFixed(2)}</strong>
+                      </div>
+                      <div className="payment-summary-card-meta">
+                        <span>Ümumi sifariş: ₼ {(store?.totalOrders || 0).toFixed(2)}</span>
+                        <span>Qalan borc: ₼ {(store?.remaining || 0).toFixed(2)}</span>
+                      </div>
                     </button>
                   ))}
                 </div>

@@ -865,41 +865,74 @@
 
 .payment-summary-table {
   display: grid;
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
 }
 
-.table-row {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr;
-  gap: 12px;
-  align-items: center;
-  border-radius: 10px;
-  padding: 14px 16px;
-  background: white;
-  border: 1px solid #e8eaf6;
-}
-
-.table-header {
-  background: #f5f7ff;
-  font-weight: 700;
-}
-
-.table-row-button {
+.payment-summary-card {
   width: 100%;
-  border: none;
-  background: none;
+  border: 1px solid #dbe4f0;
+  border-radius: 18px;
+  padding: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
   text-align: left;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-.table-row-button:hover {
-  background: #f3f6ff;
+.payment-summary-card:hover {
+  transform: translateY(-2px);
+  border-color: #93c5fd;
+  box-shadow: 0 18px 36px rgba(37, 99, 235, 0.14);
 }
 
-.active-row {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+.payment-summary-card.is-selected {
+  border-color: #2563eb;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  box-shadow: 0 18px 38px rgba(37, 99, 235, 0.18);
+}
+
+.payment-summary-card-header,
+.payment-summary-card-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.payment-summary-card-label {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.payment-summary-card-name {
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.payment-summary-card-amount {
+  color: #0f172a;
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.payment-summary-card-meta {
+  display: grid;
+  gap: 8px;
+  color: #475569;
+  font-size: 13px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(148, 163, 184, 0.22);
 }
 
 .payment-detail-section {
