@@ -6,6 +6,8 @@ const ADMIN_PASSWORD = 'uncharted0833';
 const ADMIN_ROLE = 'admin';
 const BCRYPT_SALT_ROUNDS = 10;
 
+let pool = null;
+
 function getDatabaseUrl() {
   const value = typeof process.env.DATABASE_URL === 'string'
     ? process.env.DATABASE_URL.trim().replace(/^['\"]|['\"]$/g, '')
@@ -33,11 +35,16 @@ function getDatabaseUrl() {
   return value;
 }
 
-const databaseUrl = getDatabaseUrl();
-const pool = new Pool({
-  connectionString: databaseUrl,
-  ssl: { rejectUnauthorized: false },
-});
+function getPool() {
+  if (!pool) {
+    pool = new Pool({
+      connectionString: getDatabaseUrl(),
+      ssl: { rejectUnauthorized: false },
+    });
+  }
+
+  return pool;
+}
 
 function normalizeParams(params = []) {
   if (params === undefined || params === null) {
@@ -73,7 +80,7 @@ function prepareRunSql(sql) {
 }
 
 async function run(sql, params = []) {
-  const result = await pool.query(convertPlaceholders(prepareRunSql(sql)), normalizeParams(params));
+  const result = await getPool().query(convertPlaceholders(prepareRunSql(sql)), normalizeParams(params));
 
   return {
     lastID: result.rows[0]?.id != null ? Number(result.rows[0].id) : null,
@@ -82,17 +89,17 @@ async function run(sql, params = []) {
 }
 
 async function get(sql, params = []) {
-  const result = await pool.query(convertPlaceholders(sql.trim()), normalizeParams(params));
+  const result = await getPool().query(convertPlaceholders(sql.trim()), normalizeParams(params));
   return result.rows[0] || null;
 }
 
 async function all(sql, params = []) {
-  const result = await pool.query(convertPlaceholders(sql.trim()), normalizeParams(params));
+  const result = await getPool().query(convertPlaceholders(sql.trim()), normalizeParams(params));
   return result.rows || [];
 }
 
 async function initDatabase() {
-  await pool.query('SELECT 1');
+  await getPool().query('SELECT 1');
 
   await run(
     `CREATE TABLE IF NOT EXISTS users (
@@ -210,7 +217,7 @@ async function initDatabase() {
 }
 
 module.exports = {
-  databaseUrl,
+  getPool,
   run,
   get,
   all,
