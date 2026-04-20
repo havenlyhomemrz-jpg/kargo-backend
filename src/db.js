@@ -7,32 +7,36 @@ const ADMIN_ROLE = 'admin';
 const BCRYPT_SALT_ROUNDS = 10;
 
 function getDatabaseUrl() {
-  const value = process.env.DATABASE_URL;
+  const value = typeof process.env.DATABASE_URL === 'string'
+    ? process.env.DATABASE_URL.trim().replace(/^['\"]|['\"]$/g, '')
+    : '';
 
-  if (!value || !value.trim()) {
+  if (!value) {
     throw new Error('DATABASE_URL is required for PostgreSQL connections');
   }
 
-  return value.trim();
-}
-
-function shouldUseSsl(connectionString) {
-  if (process.env.PGSSLMODE === 'disable') {
-    return false;
+  if (!/^postgres(ql)?:\/\//i.test(value)) {
+    throw new Error('DATABASE_URL must be a valid PostgreSQL connection string');
   }
 
+  let parsedUrl;
   try {
-    const parsedUrl = new URL(connectionString);
-    return !['localhost', '127.0.0.1'].includes(parsedUrl.hostname);
+    parsedUrl = new URL(value);
   } catch (error) {
-    return true;
+    throw new Error('DATABASE_URL must be a valid PostgreSQL connection string');
   }
+
+  if (!parsedUrl.hostname || parsedUrl.hostname === 'base') {
+    throw new Error('DATABASE_URL contains an invalid PostgreSQL host');
+  }
+
+  return value;
 }
 
 const databaseUrl = getDatabaseUrl();
 const pool = new Pool({
   connectionString: databaseUrl,
-  ssl: shouldUseSsl(databaseUrl) ? { rejectUnauthorized: false } : false,
+  ssl: { rejectUnauthorized: false },
 });
 
 function normalizeParams(params = []) {
