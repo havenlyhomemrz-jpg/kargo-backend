@@ -151,6 +151,7 @@ function StoreDashboard({ user, onLogout }) {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [paymentFileInputKey, setPaymentFileInputKey] = useState(Date.now());
+  const [paymentSummary, setPaymentSummary] = useState(null);
   const [filterMode, setFilterMode] = useState('today');
   const [filterDateFrom, setFilterDateFrom] = useState(getTodayString());
   const [filterDateTo, setFilterDateTo] = useState(getTodayString());
@@ -212,8 +213,18 @@ function StoreDashboard({ user, onLogout }) {
         headers: { Authorization: `Bearer ${token}` }
       });
       setPayments(response.data.payments || []);
+      if (response.data?.summary) {
+        setPaymentSummary({
+          totalAmount: Number(response.data.summary.totalAmount || 0),
+          totalPaid: Number(response.data.summary.totalPaid || 0),
+          remainingAmount: Number(response.data.summary.remainingAmount || 0)
+        });
+      } else {
+        setPaymentSummary(null);
+      }
     } catch (err) {
       setPaymentsError(err.response?.data?.error || 'Ödənişlər alınarkən xəta baş verdi');
+      setPaymentSummary(null);
     } finally {
       setPaymentsLoading(false);
     }
@@ -265,15 +276,23 @@ function StoreDashboard({ user, onLogout }) {
   const todayAmount = todayOrders
     .filter(shouldCountInStoreDebt)
     .reduce((sum, order) => sum + (parseFloat(order.price) || 0), 0);
-  const totalAmount = orders
+  const fallbackTotalAmount = orders
     .filter(shouldCountInStoreDebt)
     .reduce((sum, order) => sum + (parseFloat(order.price) || 0), 0);
-  const totalPaid = payments
+  const fallbackTotalPaid = payments
     .filter((payment) => payment?.status === 'approved')
     .reduce((sum, payment) => sum + (parseFloat(payment.amount) || 0), 0);
+  const totalAmount = Number.isFinite(Number(paymentSummary?.totalAmount))
+    ? Number(paymentSummary.totalAmount)
+    : fallbackTotalAmount;
+  const totalPaid = Number.isFinite(Number(paymentSummary?.totalPaid))
+    ? Number(paymentSummary.totalPaid)
+    : fallbackTotalPaid;
   const pendingPaymentsCount = payments.filter((payment) => payment?.status === 'pending').length;
   const debt = Number((totalAmount - totalPaid).toFixed(2));
-  const remainingDebt = Math.max(debt, 0);
+  const remainingDebt = Number.isFinite(Number(paymentSummary?.remainingAmount))
+    ? Number(paymentSummary.remainingAmount)
+    : Math.max(debt, 0);
   const unpaidOrders = orders.filter(shouldCountInStoreDebt);
   const deliveredOrdersCount = orders.filter((order) => order?.status === 'delivered').length;
   const cancelledOrdersCount = orders.filter((order) => isCancelledStatus(order?.status)).length;

@@ -192,10 +192,22 @@ function CourierDashboard({ user, onLogout }) {
     return order.address || order.storeAddress || 'Ünvan yoxdur';
   };
 
-  const isCurrentCourierOrder = (order) => String(order?.courierId) === String(user.id);
+  const getOrderCourierId = (order) => order?.courierId ?? order?.courier_id ?? order?.courierid ?? null;
+  const isCurrentCourierOrder = (order) => String(getOrderCourierId(order)) === String(user.id);
   const isActiveCourierOrder = (order) => {
     const normalizedStatus = String(order?.status || '').toLowerCase();
-    return normalizedStatus === 'active' || normalizedStatus === 'assigned';
+    return [
+      'active',
+      'assigned',
+      'teyin_edildi',
+      'approved',
+      'kuryerde',
+      'goturuldu',
+      'picked',
+      'picked_up',
+      'ontheway',
+      'yoldadir'
+    ].includes(normalizedStatus);
   };
 
   const getVisibleOrders = () => {
@@ -229,7 +241,7 @@ function CourierDashboard({ user, onLogout }) {
     return storeKey === selectedStoreKey;
   });
 
-  const pendingStoreOrders = orders.filter((order) => order?.status === 'pending');
+  const pendingStoreOrders = orders.filter((order) => isCurrentCourierOrder(order) && isActiveCourierOrder(order));
 
   const groupedStores = pendingStoreOrders.reduce((accumulator, order) => {
     const storeKey = String(order?.storeId ?? order?.storeName ?? 'unknown');
@@ -248,10 +260,10 @@ function CourierDashboard({ user, onLogout }) {
   }, {});
 
   const storeGroups = Object.values(groupedStores).sort((firstStore, secondStore) => secondStore.orderCount - firstStore.orderCount);
-  const deliveredOrdersCount = orders.filter((order) => order?.status === 'delivered').length;
+  const deliveredOrdersCount = orders.filter((order) => isCurrentCourierOrder(order) && order?.status === 'delivered').length;
   const activeOrdersCount = orders.filter((order) => isCurrentCourierOrder(order) && isActiveCourierOrder(order)).length;
   const mineOrdersCount = orders.filter(isCurrentCourierOrder).length;
-  const cancelledOrdersCount = orders.filter((order) => order?.status === 'cancelled' || order?.status === 'legv_edildi').length;
+  const cancelledOrdersCount = orders.filter((order) => isCurrentCourierOrder(order) && (order?.status === 'cancelled' || order?.status === 'legv_edildi')).length;
   const courierNavItems = [
     { id: 'mine', label: 'Mənim sifarişlərim', icon: '◎', meta: `${mineOrdersCount}` },
     { id: 'delivered', label: 'Çatdırılanlar', icon: '✓', meta: `${deliveredOrdersCount}` },
@@ -288,7 +300,7 @@ function CourierDashboard({ user, onLogout }) {
           const orderId = getOrderIdValue(order);
           const actions = getStatusActions(order.status);
           const isExpanded = expandedOrderId === orderId;
-          const isAssignedToCurrentCourier = String(order?.courierId) === String(user.id);
+          const isAssignedToCurrentCourier = String(getOrderCourierId(order)) === String(user.id);
 
           return (
             <React.Fragment key={orderId}>

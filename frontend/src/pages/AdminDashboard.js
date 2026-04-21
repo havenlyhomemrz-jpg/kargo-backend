@@ -52,6 +52,10 @@ function AdminDashboard({ user, onLogout }) {
       return false;
     }
 
+    if (order?.isCountedInEarnings !== undefined && order?.isCountedInEarnings !== null) {
+      return Boolean(order.isCountedInEarnings);
+    }
+
     if (order?.status === 'delivered') {
       return order?.isCountedInEarnings !== false;
     }
@@ -146,6 +150,8 @@ function AdminDashboard({ user, onLogout }) {
   const [payments, setPayments] = useState([]);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
   const [paymentsError, setPaymentsError] = useState('');
+  const [summaryByStore, setSummaryByStore] = useState([]);
+  const [summaryTotals, setSummaryTotals] = useState(null);
   const [receiptOpenErrors, setReceiptOpenErrors] = useState({});
   const [selectedImage, setSelectedImage] = useState(null);
   const [selectedPaymentStoreId, setSelectedPaymentStoreId] = useState(null);
@@ -206,17 +212,38 @@ function AdminDashboard({ user, onLogout }) {
       return acc;
     }, {});
 
+  const summaryByStoreMap = (Array.isArray(summaryByStore) ? summaryByStore : []).reduce((accumulator, item) => {
+    const key = String(item?.storeId ?? '');
+    if (!key) {
+      return accumulator;
+    }
+
+    accumulator[key] = {
+      totalAmount: Number(item?.totalAmount || 0),
+      totalPaid: Number(item?.totalPaid || 0),
+      remainingAmount: Number(item?.remainingAmount || 0),
+    };
+    return accumulator;
+  }, {});
+
   const storePaymentSummary = safeStores.map((store) => {
     const storeOrders = safeAllOrders.filter((order) => String(order?.storeId) === String(store?.id));
-    const totalOrders = storeOrders
+    const fallbackTotalOrders = storeOrders
       .filter(shouldCountInStoreDebt)
       .reduce((sum, order) => sum + (parseFloat(order.price) || 0), 0);
-    const totalPaid = paymentsByStoreId[String(store?.id)] || 0;
+    const fallbackTotalPaid = paymentsByStoreId[String(store?.id)] || 0;
+    const backendSummary = summaryByStoreMap[String(store?.id)] || null;
+    const totalOrders = backendSummary ? backendSummary.totalAmount : fallbackTotalOrders;
+    const totalPaid = backendSummary ? backendSummary.totalPaid : fallbackTotalPaid;
+    const remaining = backendSummary
+      ? backendSummary.remainingAmount
+      : Number((totalOrders - totalPaid).toFixed(2));
+
     return {
       ...store,
       totalOrders,
       totalPaid,
-      remaining: Number((totalOrders - totalPaid).toFixed(2))
+      remaining
     };
   });
 
@@ -235,10 +262,12 @@ function AdminDashboard({ user, onLogout }) {
     (order) => String(order?.storeId) === String(selectedPaymentStoreId)
   );
   const selectedStoreRemaining = Number(
-    ((selectedStoreOrders
+    (summaryByStoreMap[String(selectedPaymentStoreId)]
+      ? summaryByStoreMap[String(selectedPaymentStoreId)].remainingAmount
+      : ((selectedStoreOrders
       .filter(shouldCountInStoreDebt)
       .reduce((sum, order) => sum + (parseFloat(order.price) || 0), 0)) -
-      (paymentsByStoreId[String(selectedPaymentStoreId)] || 0)).toFixed(2)
+      (paymentsByStoreId[String(selectedPaymentStoreId)] || 0))).toFixed(2)
   );
   const openOrder = openOrderId
     ? pendingOrders.find((order) => String(order?.id ?? order?._id) === String(openOrderId))
@@ -573,6 +602,12 @@ function AdminDashboard({ user, onLogout }) {
         headers: { Authorization: `Bearer ${token}` }
       });
       setPayments(response.data.payments || []);
+      setSummaryByStore(Array.isArray(response.data?.summaryByStore) ? response.data.summaryByStore : []);
+      setSummaryTotals({
+        totalAmount: Number(response.data?.summaryTotals?.totalAmount || 0),
+        totalPaid: Number(response.data?.summaryTotals?.totalPaid || 0),
+        remainingAmount: Number(response.data?.summaryTotals?.remainingAmount || 0),
+      });
     } catch (err) {
       console.error('Payments fetch error:', err);
       setPaymentsError(err.response?.data?.error || 'Ödənişlər alınarkən xəta baş verdi');
@@ -623,7 +658,7 @@ function AdminDashboard({ user, onLogout }) {
     return orders.filter(order => {
       // Store filter
       if (selectedStore && selectedStore !== 'all') {
-        if (order.storeId !== selectedStore) {
+        if (String(order?.storeId ?? '') !== String(selectedStore)) {
           return false;
         }
       }
@@ -1895,10 +1930,12 @@ function AdminDashboard({ user, onLogout }) {
   const dashboardPendingOrders = safeAllOrders.filter(
     (order) => order?.status === 'pending' || order?.status === 'teyin_edildi'
   ).length;
-  const dashboardDebtTotal = storePaymentSummary.reduce(
-    (sum, store) => sum + Math.max(store?.remaining || 0, 0),
-    0
-  );
+  const dashboardDebtTotal = summaryTotals && Number.isFinite(Number(summaryTotals?.remainingAmount))
+    ? Number(summaryTotals.remainingAmount)
+    : storePaymentSummary.reduce(
+      (sum, store) => sum + Math.max(store?.remaining || 0, 0),
+      0
+    );
   const adminNavItems = [
     { id: 'home', label: 'Dashboard', icon: '◫' },
     { id: 'orders', label: 'Sifarişlər', icon: '▤' },

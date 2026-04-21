@@ -1,4 +1,11 @@
-const { createPayment, getPaymentsByStoreId, getAllPayments, approvePayment } = require('../models/paymentModel');
+const {
+  createPayment,
+  getPaymentsByStoreId,
+  getAllPayments,
+  approvePayment,
+  getStoreFinancialSummary,
+  getAllStoresFinancialSummary,
+} = require('../models/paymentModel');
 const { findStoreById } = require('../models/storeModel');
 const fs = require('fs');
 const path = require('path');
@@ -160,8 +167,15 @@ async function getPaymentsByStoreIdController(req, res) {
   }
 
   try {
-    const payments = (await getPaymentsByStoreId(requestedStoreId)).map((payment) => normalizePaymentForResponse(req, payment));
-    res.json({ payments });
+    const [payments, summary] = await Promise.all([
+      getPaymentsByStoreId(requestedStoreId),
+      getStoreFinancialSummary(requestedStoreId),
+    ]);
+
+    res.json({
+      payments: payments.map((payment) => normalizePaymentForResponse(req, payment)),
+      summary,
+    });
   } catch (error) {
     console.error('Get payments error:', error);
     res.status(500).json({ error: 'Ödənişlər alınarkən xəta baş verdi' });
@@ -170,13 +184,43 @@ async function getPaymentsByStoreIdController(req, res) {
 
 async function getAllPaymentsController(req, res) {
   try {
-    const requestedStoreId = req.query.storeId;
-    const payments = (requestedStoreId
-      ? await getPaymentsByStoreId(requestedStoreId)
-      : await getAllPayments())
-      .map((payment) => normalizePaymentForResponse(req, payment));
+    const requestedStoreId = req.query.storeId || req.query.store_id;
+    if (requestedStoreId) {
+      const [payments, summary] = await Promise.all([
+        getPaymentsByStoreId(requestedStoreId),
+        getStoreFinancialSummary(requestedStoreId),
+      ]);
 
-    res.json({ payments });
+      return res.json({
+        payments: payments.map((payment) => normalizePaymentForResponse(req, payment)),
+        summaryByStore: [{ storeId: Number(requestedStoreId), ...summary }],
+        summaryTotals: {
+          totalAmount: Number(summary.totalAmount || 0),
+          totalPaid: Number(summary.totalPaid || 0),
+          remainingAmount: Number(summary.remainingAmount || 0),
+        },
+      });
+    }
+
+    const [payments, summaryByStore] = await Promise.all([
+      getAllPayments(),
+      getAllStoresFinancialSummary(),
+    ]);
+
+    const summaryTotals = summaryByStore.reduce(
+      (accumulator, storeSummary) => ({
+        totalAmount: accumulator.totalAmount + (Number(storeSummary?.totalAmount) || 0),
+        totalPaid: accumulator.totalPaid + (Number(storeSummary?.totalPaid) || 0),
+        remainingAmount: accumulator.remainingAmount + (Number(storeSummary?.remainingAmount) || 0),
+      }),
+      { totalAmount: 0, totalPaid: 0, remainingAmount: 0 }
+    );
+
+    return res.json({
+      payments: payments.map((payment) => normalizePaymentForResponse(req, payment)),
+      summaryByStore,
+      summaryTotals,
+    });
   } catch (error) {
     console.error('Get all payments error:', error);
     res.status(500).json({ error: 'Ödənişlər alınarkən xəta baş verdi' });

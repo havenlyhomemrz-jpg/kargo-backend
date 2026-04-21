@@ -1,4 +1,4 @@
-const { getApprovedOrders, getOrdersByCourierId, getCourierPanelOrders, updateOrderStatus: updateOrderStatusModel, getOrderById } = require('../models/orderModel');
+const { getApprovedOrders, getOrdersByCourierId, updateOrderStatus: updateOrderStatusModel, getOrderById } = require('../models/orderModel');
 
 function isCancelledStatus(status) {
   return status === 'cancelled' || status === 'legv_edildi';
@@ -102,8 +102,8 @@ async function getCourierOrders(req, res) {
   const courierId = req.user.sub;
 
   try {
-    const allCourierOrders = await getCourierPanelOrders(courierId);
-    const orders = allCourierOrders.map(removePrice);
+    const assignedOrders = await getOrdersByCourierId(courierId);
+    const orders = assignedOrders.map(removePrice);
     res.json({ orders });
   } catch (error) {
     console.error('Get courier orders error:', error);

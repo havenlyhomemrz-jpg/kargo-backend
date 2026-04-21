@@ -1,5 +1,29 @@
 const { run, get, all } = require('../db');
 
+const ORDER_SELECT_COLUMNS = `
+  id,
+  customername AS "customerName",
+  customerphone AS "customerPhone",
+  phone,
+  time,
+  deliverytype AS "deliveryType",
+  metro,
+  metroname AS "metroName",
+  address,
+  price,
+  status,
+  storeid AS "storeId",
+  storename AS "storeName",
+  storephone AS "storePhone",
+  storeaddress AS "storeAddress",
+  courierid AS "courierId",
+  cancelreason AS "cancelReason",
+  cancelledby AS "cancelledBy",
+  iscountedinearnings AS "isCountedInEarnings",
+  createdat AS "createdAt",
+  updatedat AS "updatedAt"
+`;
+
 function isCancelledStatus(status) {
   return status === 'cancelled' || status === 'legv_edildi';
 }
@@ -17,10 +41,18 @@ function normalizeOrder(row) {
     return null;
   }
 
+  const priceValue = Number(row.price ?? 0);
+  const rawIsCountedInEarnings = row.isCountedInEarnings;
+  const normalizedIsCountedInEarnings =
+    rawIsCountedInEarnings === true
+    || rawIsCountedInEarnings === 1
+    || rawIsCountedInEarnings === '1'
+    || rawIsCountedInEarnings === 'true';
+
   return {
     ...row,
-    price: Number(row.price),
-    isCountedInEarnings: Boolean(row.isCountedInEarnings),
+    price: Number.isFinite(priceValue) ? priceValue : 0,
+    isCountedInEarnings: normalizedIsCountedInEarnings,
   };
 }
 
@@ -73,23 +105,41 @@ async function createOrder(orderData) {
 }
 
 async function getOrderById(id) {
-  const row = await get('SELECT * FROM orders WHERE id = ?', [id]);
+  const row = await get(
+    `SELECT ${ORDER_SELECT_COLUMNS}
+     FROM orders
+     WHERE id = ?`,
+    [id]
+  );
   return normalizeOrder(row);
 }
 
 async function getOrdersByStoreId(storeId) {
-  const rows = await all('SELECT * FROM orders WHERE storeId = ? ORDER BY id DESC', [storeId]);
+  const rows = await all(
+    `SELECT ${ORDER_SELECT_COLUMNS}
+     FROM orders
+     WHERE storeId = ?
+     ORDER BY id DESC`,
+    [storeId]
+  );
   return rows.map(normalizeOrder);
 }
 
 async function getApprovedOrders() {
-  const rows = await all('SELECT * FROM orders WHERE status = ? ORDER BY id DESC', ['approved']);
+  const rows = await all(
+    `SELECT ${ORDER_SELECT_COLUMNS}
+     FROM orders
+     WHERE status = ?
+     ORDER BY id DESC`,
+    ['approved']
+  );
   return rows.map(normalizeOrder);
 }
 
 async function getPendingOrders() {
   const rows = await all(
-    `SELECT * FROM orders
+    `SELECT ${ORDER_SELECT_COLUMNS}
+     FROM orders
      WHERE status IN (?, ?)
      ORDER BY id DESC`,
     ['pending', 'teyin_edildi']
@@ -99,16 +149,23 @@ async function getPendingOrders() {
 }
 
 async function getOrdersByCourierId(courierId) {
-  const rows = await all('SELECT * FROM orders WHERE courierId = ? ORDER BY id DESC', [courierId]);
+  const rows = await all(
+    `SELECT ${ORDER_SELECT_COLUMNS}
+     FROM orders
+     WHERE courierId = ?
+     ORDER BY id DESC`,
+    [courierId]
+  );
   return rows.map(normalizeOrder);
 }
 
 async function getCourierPanelOrders(courierId) {
   const rows = await all(
-    `SELECT * FROM orders
-     WHERE status = ? OR courierId = ?
+    `SELECT ${ORDER_SELECT_COLUMNS}
+     FROM orders
+     WHERE courierId = ?
      ORDER BY updatedAt DESC, createdAt DESC, id DESC`,
-    ['pending', courierId]
+    [courierId]
   );
 
   return rows.map(normalizeOrder);
@@ -182,7 +239,11 @@ async function cancelOrder(id, cancelReason = null, cancelledBy = null) {
 }
 
 async function getAllOrders() {
-  const rows = await all('SELECT * FROM orders ORDER BY id DESC');
+  const rows = await all(
+    `SELECT ${ORDER_SELECT_COLUMNS}
+     FROM orders
+     ORDER BY id DESC`
+  );
   return rows.map(normalizeOrder);
 }
 
